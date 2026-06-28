@@ -101,13 +101,13 @@ export default function GenerativeMesh({ className = "", isLightMode = false }: 
 
       // Soft backing glow behind the sphere for extra volumetric presence and brightness
       if (!isLightMode) {
-        const sphereGlow = ctx.createRadialGradient(cx, cy, baseRadius * 0.05, cx, cy, baseRadius * 1.1);
-        sphereGlow.addColorStop(0, "rgba(255, 255, 255, 0.12)");
-        sphereGlow.addColorStop(0.4, "rgba(255, 255, 255, 0.05)");
+        const sphereGlow = ctx.createRadialGradient(cx, cy, baseRadius * 0.05, cx, cy, baseRadius * 1.2);
+        sphereGlow.addColorStop(0, "rgba(255, 255, 255, 0.18)");
+        sphereGlow.addColorStop(0.4, "rgba(255, 255, 255, 0.07)");
         sphereGlow.addColorStop(1, "rgba(255, 255, 255, 0)");
         ctx.fillStyle = sphereGlow;
         ctx.beginPath();
-        ctx.arc(cx, cy, baseRadius * 1.1, 0, Math.PI * 2);
+        ctx.arc(cx, cy, baseRadius * 1.2, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -209,27 +209,57 @@ export default function GenerativeMesh({ className = "", isLightMode = false }: 
           const p1 = points[i][j];
           const p2 = points[i + 1][j];
           const p3 = points[i][j + 1];
+          const p4 = points[i + 1][j + 1];
 
           // Set adaptive line width and opacity based on proximity/depth for awesome 3D perception
           const depthAlpha = p1.alpha;
-          const baseOpacity = 0.58;
+          const baseOpacity = 0.82;
           const computedAlpha = depthAlpha * baseOpacity;
+          const coreLineWidth = Math.max(0.35, (depthAlpha) * 1.95);
 
           // Draw longitude connections (down)
+          // 1. Soft wide glow pass
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `${strokeColorMain}${computedAlpha * 0.32})`;
+          ctx.lineWidth = coreLineWidth * 2.5;
+          ctx.stroke();
+
+          // 2. High-contrast core line pass
           ctx.beginPath();
           ctx.moveTo(p1.x, p1.y);
           ctx.lineTo(p2.x, p2.y);
           ctx.strokeStyle = `${strokeColorMain}${computedAlpha})`;
-          ctx.lineWidth = Math.max(0.25, (depthAlpha) * 1.55);
+          ctx.lineWidth = coreLineWidth;
           ctx.stroke();
 
           // Draw latitude connections (right)
+          // 1. Soft wide glow pass
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p3.x, p3.y);
+          ctx.strokeStyle = `${strokeColorMain}${computedAlpha * 0.32})`;
+          ctx.lineWidth = coreLineWidth * 2.5;
+          ctx.stroke();
+
+          // 2. High-contrast core line pass
           ctx.beginPath();
           ctx.moveTo(p1.x, p1.y);
           ctx.lineTo(p3.x, p3.y);
           ctx.strokeStyle = `${strokeColorMain}${computedAlpha})`;
-          ctx.lineWidth = Math.max(0.25, (depthAlpha) * 1.55);
+          ctx.lineWidth = coreLineWidth;
           ctx.stroke();
+
+          // Add cross connections occasionally to make it even denser and brighter like a neural fabric
+          if ((i + j) % 3 === 0) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p4.x, p4.y);
+            ctx.strokeStyle = `${strokeColorMain}${computedAlpha * 0.15})`;
+            ctx.lineWidth = coreLineWidth * 0.5;
+            ctx.stroke();
+          }
         }
       }
 
@@ -238,11 +268,20 @@ export default function GenerativeMesh({ className = "", isLightMode = false }: 
         for (let j = 0; j <= M; j += 2) {
           const pt = points[i][j];
           if (pt.depth < 0) { // foreground only
+            // Draw a subtle outer halo/glow around the point
             ctx.beginPath();
-            ctx.arc(pt.x, pt.y, Math.max(0.6, pt.alpha * 1.5), 0, Math.PI * 2);
+            ctx.arc(pt.x, pt.y, Math.max(1.8, pt.alpha * 5.0), 0, Math.PI * 2);
             ctx.fillStyle = isLightMode
-              ? `rgba(15, 23, 42, ${pt.alpha * 0.4})`
-              : `rgba(255, 255, 255, ${pt.alpha * 0.85})`;
+              ? `rgba(15, 23, 42, ${pt.alpha * 0.15})`
+              : `rgba(255, 255, 255, ${pt.alpha * 0.28})`;
+            ctx.fill();
+
+            // Core highly bright point
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, Math.max(0.8, pt.alpha * 2.5), 0, Math.PI * 2);
+            ctx.fillStyle = isLightMode
+              ? `rgba(15, 23, 42, ${pt.alpha * 0.65})`
+              : `rgba(255, 255, 255, ${pt.alpha * 0.98})`;
             ctx.fill();
           }
         }
