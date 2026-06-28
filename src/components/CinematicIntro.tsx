@@ -572,7 +572,8 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
         const sx = cX + star.x * w * 0.4 * persp;
         const sy = cY + star.y * h * 0.4 * persp;
 
-        if (sx >= 0 && sx < w && sy >= 0 && sy < h) {
+        // Only render the star on the canvas if we are not in Scene 6 (masterpiece/plain black background)
+        if (currentSceneIdx !== 6 && sx >= 0 && sx < w && sy >= 0 && sy < h) {
           const alpha = star.baseAlpha * (1.0 - star.z / 3.0);
           ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
           ctx.beginPath();
@@ -830,11 +831,13 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
           }
         }
 
-        // Draw particle dust point
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw particle dust point (Only if we are not in Scene 6 to maintain plain black background)
+        if (currentSceneIdx !== 6) {
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
 
       // 5. DRAW VOLUMETRIC COLLAPSE CORE OR RAY-TRACED TITANIUM MASTERPIECE
@@ -949,27 +952,12 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
               transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
               className="flex flex-col items-center justify-center w-full relative"
             >
-              {/* Radial ambient glow backdrop to guarantee 100% legibility against space particles */}
-              <div className="absolute w-[120%] h-[150%] -z-10 bg-radial from-white/40 via-amber-400/20 to-transparent blur-3xl pointer-events-none" />
-
               <h2 className="font-sans font-black text-4xl sm:text-6xl md:text-7xl lg:text-8xl uppercase tracking-[-0.03em] leading-[1.05] text-center select-text">
-                <span 
-                  className="text-black inline-block"
-                  style={{
-                    WebkitTextStroke: "1.5px rgba(255, 255, 255, 0.95)",
-                    textShadow: "0 0 30px rgba(255, 255, 255, 0.85), 0 0 15px rgba(245, 158, 11, 0.5)",
-                  }}
-                >
+                <span className="text-white inline-block drop-shadow-[0_2px_10px_rgba(255,255,255,0.15)]">
                   Kumaraswamy
                 </span>{" "}
                 <br className="sm:hidden" />
-                <span 
-                  className="text-black inline-block"
-                  style={{
-                    WebkitTextStroke: "1.5px rgba(255, 255, 255, 0.95)",
-                    textShadow: "0 0 30px rgba(255, 255, 255, 0.85), 0 0 15px rgba(245, 158, 11, 0.5)",
-                  }}
-                >
+                <span className="text-white inline-block drop-shadow-[0_2px_10px_rgba(255,255,255,0.15)]">
                   Bakkashetti
                 </span>
               </h2>
