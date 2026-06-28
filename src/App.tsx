@@ -12,6 +12,7 @@ import AiRepresentative from "./components/AiRepresentative";
 import CurtainSweep from "./components/CurtainSweep";
 import ImmersiveSkillsUniverse from "./components/ImmersiveSkillsUniverse";
 import CinematicIntro from "./components/CinematicIntro";
+import CosmicPlasmaCursor from "./components/CosmicPlasmaCursor";
 
 export default function App() {
   const [showIntro, setShowIntro] = useState(() => {
@@ -128,6 +129,9 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen text-[#F5F5F5] light:text-[#171717] font-sans selection:bg-orange-500/20 selection:text-orange-400 overflow-x-hidden transition-colors duration-300">
+      {/* Premium Custom Cosmic Plasma Cursor */}
+      <CosmicPlasmaCursor inGalaxy={isImmersiveSkillsActive} />
+
       {/* Premium Swipe Curtain Transitions */}
       <CurtainSweep isAnimating={isSweeping} isLightMode={theme === "light"} />
 
