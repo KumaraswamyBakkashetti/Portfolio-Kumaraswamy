@@ -62,8 +62,13 @@ export default function AiRepresentative() {
       });
 
       if (!res.ok) {
-        throw new Error("Could not connect to Gemini API. Ensure GEMINI_API_KEY is configured.");
-      }
+  const error = await res.json().catch(() => ({}));
+
+  throw new Error(
+    error.error ||
+      `Request failed with status ${res.status}`
+  );
+}
 
       const data = await res.json();
       if (data.error) {
@@ -77,11 +82,14 @@ export default function AiRepresentative() {
       };
       setMessages((prev) => [...prev, modelMsg]);
     } catch (err: any) {
-      console.error(err);
-      setApiError(
-        "My backend brain is offline. Please make sure the GEMINI_API_KEY is configured under Secrets, or email Kumaraswamy directly!"
-      );
-    } finally {
+  console.error(err);
+
+  setApiError(
+    err?.message ||
+      "An unexpected error occurred while contacting the AI service."
+  );
+}
+    finally {
       setIsLoading(false);
     }
   };
@@ -137,7 +145,9 @@ export default function AiRepresentative() {
                       Kumaraswamy AI Twin
                       <Sparkles size={14} className="text-orange-400 animate-pulse" />
                     </h3>
-                    <p className="font-sans text-xs text-orange-400 font-medium">Powered by Gemini 2.5 Flash</p>
+                    <p className="font-sans text-xs text-orange-400 font-medium">
+    Powered by Groq • Llama 3.3 70B
+</p>
                   </div>
                 </div>
                 <button
