@@ -33,6 +33,7 @@ export default function SkillsConstellation() {
   const [time, setTime] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const requestRef = useRef<number | null>(null);
+  const planetAnglesRef = useRef<{ [key: string]: number }>({});
 
   // Interaction vectors
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
@@ -264,15 +265,20 @@ export default function SkillsConstellation() {
 
       const camera = cameraRef.current;
       
-      // Auto orbiting system rotation plus user mouse interaction offsets
-      camera.targetYaw = localTime * 0.06 + mouse.x * 0.4;
-      camera.targetPitch = 0.85 + Math.sin(localTime * 0.15) * 0.06 + mouse.y * 0.3;
+      // Slow cinematic drift & gentle zoom breathing (sine wave modulation on zoom level)
+      const zoomBreathing = Math.sin(localTime * 0.25) * 0.025;
+      const slowDriftYaw = Math.sin(localTime * 0.08) * 0.04;
+      const slowDriftPitch = Math.cos(localTime * 0.12) * 0.025;
 
-      // Handle zooming and focus locks
+      // Auto orbiting system rotation plus user mouse interaction offsets with cinematic slow drift
+      camera.targetYaw = localTime * 0.06 + mouse.x * 0.4 + slowDriftYaw;
+      camera.targetPitch = 0.85 + Math.sin(localTime * 0.15) * 0.06 + mouse.y * 0.3 + slowDriftPitch;
+
+      // Handle zooming and focus locks with zoom breathing
       if (selectedPlanet) {
-        camera.targetZoom = w < 768 ? 1.5 : 1.9; // Zoom in to focus planet
+        camera.targetZoom = (w < 768 ? 1.5 : 1.9) + zoomBreathing; // Zoom in to focus planet
       } else {
-        camera.targetZoom = w < 768 ? 0.65 : 0.95; // Wide planetary view
+        camera.targetZoom = (w < 768 ? 0.65 : 0.95) + zoomBreathing; // Wide planetary view
       }
 
       // Interpolate camera variables smoothly
@@ -411,13 +417,37 @@ export default function SkillsConstellation() {
       planets.forEach((p) => {
         const radius = p.orbitRadius;
         
-        // Orbital trajectory mathematics around traveling Core
-        const angle = localTime * p.orbitSpeed + (planets.indexOf(p) * Math.PI * 2) / planets.length;
-        
+        // Dynamic angle calculation with hover/focus pausing
+        const initAngle = (planets.indexOf(p) * Math.PI * 2) / planets.length;
+        if (planetAnglesRef.current[p.id] === undefined) {
+          planetAnglesRef.current[p.id] = initAngle;
+        }
+
+        const isHover = hoveredPlanet?.id === p.id;
+        const isFocus = selectedPlanet?.id === p.id;
+
+        // If not paused, advance orbital angle with smooth speed modulation
+        if (!isHover && !isFocus) {
+          const currentAngle = planetAnglesRef.current[p.id];
+          const speedMultiplier = 1.0 + Math.sin(currentAngle) * 0.15; // Smooth acceleration and deceleration
+          planetAnglesRef.current[p.id] = currentAngle + (0.016 * p.orbitSpeed * speedMultiplier);
+        }
+
+        const angle = planetAnglesRef.current[p.id];
+
+        // Tilted plane with slight inclination sway and gentle gravitational wobble
+        const inclinationWobble = p.inclination + Math.sin(localTime * 1.2 + planets.indexOf(p)) * 0.015;
+        const wobbleRadius = radius + Math.sin(localTime * 2.0 + planets.indexOf(p)) * 3.5;
+
+        // Floating drift behavior
+        const driftX = Math.sin(localTime * 0.45 + planets.indexOf(p)) * 3.0;
+        const driftY = Math.cos(localTime * 0.35 + planets.indexOf(p)) * 2.0;
+        const driftZ = Math.sin(localTime * 0.25 + planets.indexOf(p)) * 3.0;
+
         // Circular orbit on tilted plane
-        const localX = radius * Math.cos(angle);
-        const localZ = radius * Math.sin(angle) * Math.cos(p.inclination);
-        const localY = radius * Math.sin(angle) * Math.sin(p.inclination);
+        const localX = wobbleRadius * Math.cos(angle) + driftX;
+        const localZ = wobbleRadius * Math.sin(angle) * Math.cos(inclinationWobble) + driftZ;
+        const localY = wobbleRadius * Math.sin(angle) * Math.sin(inclinationWobble) + driftY;
 
         // Core lag spring offsets creating helical vortex physics
         const tOffset = p.delay;
@@ -590,12 +620,30 @@ export default function SkillsConstellation() {
         renderStack.push({
           depth: pProj.depth,
           draw: () => {
+            const isAnyFocused = !!selectedPlanet;
+            const isThisFocusedOrHovered = isFocus || isHover;
+
+            // Dim other planets on canvas
+            let alpha = 1.0;
+            if (isAnyFocused && !isThisFocusedOrHovered) {
+              alpha = 0.22;
+            } else if (hoveredPlanet && hoveredPlanet.id !== p.id && !selectedPlanet) {
+              alpha = 0.38;
+            }
+
+            const hexToRgba = (hex: string, op: number) => {
+              const r = parseInt(hex.slice(1,3), 16);
+              const g = parseInt(hex.slice(3,5), 16);
+              const b = parseInt(hex.slice(5,7), 16);
+              return `rgba(${r}, ${g}, ${b}, ${op})`;
+            };
+
             const renderSize = p.size * (isHover ? 1.3 : isFocus ? 1.25 : 1.0) * pProj.scale;
 
             // Draw outer atmospheric cloud rings
             ctx.beginPath();
             ctx.arc(pProj.x, pProj.y, renderSize * 1.5, 0, Math.PI * 2);
-            ctx.strokeStyle = p.color + "25"; // transparent atmosphere
+            ctx.strokeStyle = hexToRgba(p.color, alpha * 0.15); // transparent atmosphere
             ctx.lineWidth = 1 * pProj.scale;
             ctx.stroke();
 
@@ -604,20 +652,43 @@ export default function SkillsConstellation() {
               pProj.x - renderSize * 0.3, pProj.y - renderSize * 0.3, renderSize * 0.1,
               pProj.x, pProj.y, renderSize
             );
-            bodyGrad.addColorStop(0, "#FFFFFF");
-            bodyGrad.addColorStop(0.35, p.color);
-            bodyGrad.addColorStop(1, "#050505");
+            bodyGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+            bodyGrad.addColorStop(0.35, hexToRgba(p.color, alpha));
+            bodyGrad.addColorStop(1, `rgba(5, 5, 5, ${alpha})`);
 
             ctx.beginPath();
             ctx.arc(pProj.x, pProj.y, renderSize, 0, Math.PI * 2);
             ctx.fillStyle = bodyGrad;
             ctx.fill();
 
+            // Subtle rotating surface bands (3D texture simulation)
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(pProj.x, pProj.y, renderSize, 0, Math.PI * 2);
+            ctx.clip(); // restrict lines inside the sphere shape
+
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.12})`;
+            ctx.lineWidth = 1 * pProj.scale;
+            ctx.beginPath();
+            
+            // Draw rotating diagonal bands across the sphere
+            const rotAngle = localTime * 0.5 + planets.indexOf(p);
+            ctx.ellipse(pProj.x, pProj.y, renderSize * 1.0, renderSize * 0.28, rotAngle, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Draw a secondary darker atmospheric shadow band
+            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha * 0.25})`;
+            ctx.beginPath();
+            ctx.ellipse(pProj.x, pProj.y, renderSize * 1.0, renderSize * 0.32, rotAngle + 0.5, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+
             // Dynamic orbit indicator highlight for active planets
             if (isHover || isFocus) {
               ctx.beginPath();
               ctx.arc(pProj.x, pProj.y, renderSize * 1.9, 0, Math.PI * 2);
-              ctx.strokeStyle = p.color + "90";
+              ctx.strokeStyle = hexToRgba(p.color, alpha * 0.55);
               ctx.lineWidth = 1.5 * pProj.scale;
               ctx.setLineDash([4, 4]);
               ctx.stroke();

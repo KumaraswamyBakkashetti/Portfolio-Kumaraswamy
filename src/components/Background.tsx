@@ -45,6 +45,42 @@ export default function Background() {
       } as any);
     }
 
+    const backgroundStars: Array<{
+      x: number;
+      y: number;
+      size: number;
+      twinkleSpeed: number;
+      phase: number;
+      alpha: number;
+    }> = [];
+
+    const generateStars = () => {
+      backgroundStars.length = 0;
+      const count = Math.min(250, Math.floor((width * height) / 5000));
+      for (let i = 0; i < count; i++) {
+        backgroundStars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          size: Math.random() * 1.0 + 0.2,
+          twinkleSpeed: Math.random() * 0.015 + 0.005,
+          phase: Math.random() * Math.PI * 2,
+          alpha: Math.random() * 0.45 + 0.15,
+        });
+      }
+    };
+
+    generateStars();
+
+    let bgShootingStar: {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      len: number;
+      life: number;
+      maxLife: number;
+    } | null = null;
+
     let mouseX = -9999;
     let mouseY = -9999;
 
@@ -62,6 +98,7 @@ export default function Background() {
       if (!canvas) return;
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
+      generateStars();
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -89,6 +126,69 @@ export default function Background() {
       bottomGlow.addColorStop(1, isLight ? "rgba(250, 250, 250, 0)" : "rgba(5, 5, 5, 0)");
       ctx.fillStyle = bottomGlow;
       ctx.fillRect(0, 0, width, height);
+
+      // Render slow-moving background stars with multiple brightness levels
+      backgroundStars.forEach((star) => {
+        star.phase += prefersReducedMotion ? 0 : star.twinkleSpeed;
+        const pulse = Math.sin(star.phase) * 0.35 + 0.65;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = isLight
+          ? `rgba(15, 23, 42, ${star.alpha * pulse * 0.4})`
+          : `rgba(255, 255, 255, ${star.alpha * pulse * 0.8})`;
+        ctx.fill();
+      });
+
+      // Soft low-opacity cosmic nebula dust clouds (subtle fog)
+      const nebulaColor = isLight ? "rgba(249, 115, 22, 0.015)" : "rgba(249, 115, 22, 0.03)";
+      ctx.fillStyle = nebulaColor;
+      ctx.beginPath();
+      ctx.arc(width * 0.35, height * 0.45, Math.min(width, height) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      const nebulaColor2 = isLight ? "rgba(59, 130, 246, 0.015)" : "rgba(59, 130, 246, 0.03)";
+      ctx.fillStyle = nebulaColor2;
+      ctx.beginPath();
+      ctx.arc(width * 0.75, height * 0.55, Math.min(width, height) * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Occasional background shooting stars
+      if (!prefersReducedMotion) {
+        if (!bgShootingStar && Math.random() < 0.001) {
+          bgShootingStar = {
+            x: Math.random() * width * 0.6,
+            y: Math.random() * height * 0.4,
+            vx: Math.random() * 5 + 6,
+            vy: Math.random() * 3 + 4,
+            len: Math.random() * 30 + 20,
+            life: 0,
+            maxLife: Math.random() * 20 + 15
+          };
+        }
+
+        if (bgShootingStar) {
+          bgShootingStar.x += bgShootingStar.vx;
+          bgShootingStar.y += bgShootingStar.vy;
+          bgShootingStar.life++;
+
+          const alpha = 1 - bgShootingStar.life / bgShootingStar.maxLife;
+          ctx.beginPath();
+          ctx.moveTo(bgShootingStar.x, bgShootingStar.y);
+          ctx.lineTo(
+            bgShootingStar.x - bgShootingStar.vx * 0.75,
+            bgShootingStar.y - bgShootingStar.vy * 0.75
+          );
+          ctx.strokeStyle = isLight
+            ? `rgba(249, 115, 22, ${alpha * 0.25})`
+            : `rgba(249, 115, 22, ${alpha * 0.65})`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          if (bgShootingStar.life >= bgShootingStar.maxLife) {
+            bgShootingStar = null;
+          }
+        }
+      }
 
       // Draw connections
       ctx.lineWidth = 0.6;

@@ -76,6 +76,7 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const requestRef = useRef<number | null>(null);
   const timeRef = useRef<number>(0);
+  const planetAnglesRef = useRef<{ [key: string]: number }>({});
   
   // Interactive gesture refs
   const isDraggingRef = useRef<boolean>(false);
@@ -471,20 +472,25 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
 
       const camera = cameraRef.current;
 
+      // Slow cinematic drift & gentle zoom breathing (sine wave modulation on zoom level)
+      const zoomBreathing = Math.sin(timeRef.current * 0.25) * 0.025;
+      const slowDriftYaw = Math.sin(timeRef.current * 0.08) * 0.04;
+      const slowDriftPitch = Math.cos(timeRef.current * 0.12) * 0.025;
+
       // Autopilot floating system rotation mechanics
       if (cameraAutopilot) {
-        camera.targetYaw += camera.yawVelocity;
-        camera.targetPitch = 0.85 + Math.sin(timeRef.current * 0.12) * 0.05 + mouse.y * 0.2;
+        camera.targetYaw += camera.yawVelocity + slowDriftYaw * 0.005;
+        camera.targetPitch = 0.85 + Math.sin(timeRef.current * 0.12) * 0.05 + mouse.y * 0.2 + slowDriftPitch;
       } else {
-        camera.targetYaw = mouse.x * 0.6;
-        camera.targetPitch = 0.85 + mouse.y * 0.4;
+        camera.targetYaw = mouse.x * 0.6 + slowDriftYaw;
+        camera.targetPitch = 0.85 + mouse.y * 0.4 + slowDriftPitch;
       }
 
-      // Focused cinematic planet camera locks
+      // Focused cinematic planet camera locks with zoom breathing
       if (selectedPlanet) {
-        camera.targetZoom = w < 768 ? 1.4 : 1.75;
+        camera.targetZoom = (w < 768 ? 1.4 : 1.75) + zoomBreathing;
       } else {
-        camera.targetZoom = w < 768 ? 0.6 : 0.8;
+        camera.targetZoom = (w < 768 ? 0.6 : 0.8) + zoomBreathing;
       }
 
       // Smooth camera interpolation variables
@@ -639,12 +645,38 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
       // Calculate planets coordinates
       planets.forEach((p) => {
         const radius = p.orbitRadius;
-        const angle = timeRef.current * p.orbitSpeed + (planets.indexOf(p) * Math.PI * 2) / planets.length;
+        
+        // Dynamic angle calculation with hover/focus pausing
+        const initAngle = (planets.indexOf(p) * Math.PI * 2) / planets.length;
+        if (planetAnglesRef.current[p.id] === undefined) {
+          planetAnglesRef.current[p.id] = initAngle;
+        }
+
+        const isHover = hoveredPlanet?.id === p.id;
+        const isFocus = selectedPlanet?.id === p.id;
+
+        // If not paused, advance orbital angle with smooth speed modulation
+        if (!isHover && !isFocus) {
+          const currentAngle = planetAnglesRef.current[p.id];
+          const speedMultiplier = 1.0 + Math.sin(currentAngle) * 0.15; // Smooth acceleration and deceleration
+          planetAnglesRef.current[p.id] = currentAngle + (dt * p.orbitSpeed * speedMultiplier);
+        }
+
+        const angle = planetAnglesRef.current[p.id];
+
+        // Tilted plane with slight inclination sway and gentle gravitational wobble
+        const inclinationWobble = p.inclination + Math.sin(timeRef.current * 1.2 + planets.indexOf(p)) * 0.015;
+        const wobbleRadius = radius + Math.sin(timeRef.current * 2.0 + planets.indexOf(p)) * 3.5;
+
+        // Floating drift behavior
+        const driftX = Math.sin(timeRef.current * 0.45 + planets.indexOf(p)) * 3.0;
+        const driftY = Math.cos(timeRef.current * 0.35 + planets.indexOf(p)) * 2.0;
+        const driftZ = Math.sin(timeRef.current * 0.25 + planets.indexOf(p)) * 3.0;
 
         // Elliptical coordinate formulas with inclined slant
-        const localX = radius * Math.cos(angle) * p.eccentricity;
-        const localZ = radius * Math.sin(angle) * Math.cos(p.inclination);
-        const localY = radius * Math.sin(angle) * Math.sin(p.inclination);
+        const localX = (wobbleRadius * Math.cos(angle) + driftX) * p.eccentricity;
+        const localZ = wobbleRadius * Math.sin(angle) * Math.cos(inclinationWobble) + driftZ;
+        const localY = wobbleRadius * Math.sin(angle) * Math.sin(inclinationWobble) + driftY;
 
         // Spring lag coordinates tracing the moving Core (creates beautiful helical trailing)
         const lagCoreX = Math.sin((timeRef.current - p.delay * 0.05) * 0.75) * 38 * introProgressRef.current;
@@ -897,13 +929,31 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
         renderStack.push({
           depth: pProj.depth,
           draw: () => {
+            const isAnyFocused = !!selectedPlanet;
+            const isThisFocusedOrHovered = isFocus || isHover;
+
+            // Dim other planets on canvas
+            let alpha = 1.0;
+            if (isAnyFocused && !isThisFocusedOrHovered) {
+              alpha = 0.22;
+            } else if (hoveredPlanet && hoveredPlanet.id !== p.id && !selectedPlanet) {
+              alpha = 0.38;
+            }
+
+            const hexToRgba = (hex: string, op: number) => {
+              const r = parseInt(hex.slice(1,3), 16);
+              const g = parseInt(hex.slice(3,5), 16);
+              const b = parseInt(hex.slice(5,7), 16);
+              return `rgba(${r}, ${g}, ${b}, ${op})`;
+            };
+
             const baseSize = p.size * (isHover ? 1.35 : isFocus ? 1.25 : 1.0) * pProj.scale * introProgressRef.current;
             if (baseSize <= 0) return;
 
             // Draw planetary atmosphere ring
             ctx.beginPath();
             ctx.arc(pProj.x, pProj.y, baseSize * 1.6, 0, Math.PI * 2);
-            ctx.strokeStyle = p.color + "28";
+            ctx.strokeStyle = hexToRgba(p.color, alpha * 0.16);
             ctx.lineWidth = 1.2 * pProj.scale;
             ctx.stroke();
 
@@ -912,21 +962,44 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
               pProj.x - baseSize * 0.35, pProj.y - baseSize * 0.35, baseSize * 0.08,
               pProj.x, pProj.y, baseSize
             );
-            sphereGrad.addColorStop(0, "#FFFFFF"); // specular white spot
-            sphereGrad.addColorStop(0.35, p.color); // planet core pigment
-            sphereGrad.addColorStop(0.85, "#0d0a14"); // twilight dark transition
-            sphereGrad.addColorStop(1, "#020105"); // shadow terminal block
+            sphereGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`); // specular white spot
+            sphereGrad.addColorStop(0.35, hexToRgba(p.color, alpha)); // planet core pigment
+            sphereGrad.addColorStop(0.85, `rgba(13, 10, 20, ${alpha})`); // twilight dark transition
+            sphereGrad.addColorStop(1, `rgba(2, 1, 5, ${alpha})`); // shadow terminal block
 
             ctx.beginPath();
             ctx.arc(pProj.x, pProj.y, baseSize, 0, Math.PI * 2);
             ctx.fillStyle = sphereGrad;
             ctx.fill();
 
+            // Subtle rotating surface bands (3D texture simulation)
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(pProj.x, pProj.y, baseSize, 0, Math.PI * 2);
+            ctx.clip(); // restrict lines inside the sphere shape
+
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.12})`;
+            ctx.lineWidth = 1 * pProj.scale;
+            ctx.beginPath();
+            
+            // Draw rotating diagonal bands across the sphere
+            const rotAngle = timeRef.current * 0.5 + planets.indexOf(p);
+            ctx.ellipse(pProj.x, pProj.y, baseSize * 1.0, baseSize * 0.28, rotAngle, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Draw a secondary darker atmospheric shadow band
+            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha * 0.25})`;
+            ctx.beginPath();
+            ctx.ellipse(pProj.x, pProj.y, baseSize * 1.0, baseSize * 0.32, rotAngle + 0.5, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+
             // Glowing dash selector rings
             if (isHover || isFocus) {
               ctx.beginPath();
               ctx.arc(pProj.x, pProj.y, baseSize * 1.95, 0, Math.PI * 2);
-              ctx.strokeStyle = p.color + "B0";
+              ctx.strokeStyle = hexToRgba(p.color, alpha * 0.68);
               ctx.lineWidth = 1.8 * pProj.scale;
               ctx.setLineDash([5, 5]);
               ctx.stroke();
