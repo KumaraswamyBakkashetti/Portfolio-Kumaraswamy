@@ -944,7 +944,7 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
           y: pProj.y + p.size * pProj.scale + 18,
           scale: pProj.scale,
           zIndex: Math.floor((120 - pProj.depth) * 2),
-          opacity: selectedPlanet && !isFocus ? 0.12 : Math.max(0.35, Math.min(1, pProj.scale * 1.15)),
+          opacity: selectedPlanet && !isFocus ? 0.25 : Math.max(0.75, Math.min(1, pProj.scale * 1.25)),
           color: p.color,
           active: isFocus || (isHover && !selectedPlanet)
         });
@@ -1016,7 +1016,7 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
               y: mProj.y + 12,
               scale: mProj.scale,
               zIndex: Math.floor((130 - mProj.depth) * 2),
-              opacity: hoveredMoon && !isMoonHover ? 0.3 : Math.max(0.4, Math.min(1, mProj.scale * 1.12)),
+              opacity: hoveredMoon && !isMoonHover ? 0.35 : Math.max(0.75, Math.min(1, mProj.scale * 1.25)),
               color: p.color,
               active: isMoonHover,
               refObject: moon
@@ -1143,7 +1143,13 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
             return (
               <button
                 key={overlay.id}
-                style={style}
+                style={{
+                  ...style,
+                  border: `1.5px solid ${overlay.color}`,
+                  boxShadow: isActive 
+                    ? `0 0 20px ${overlay.color}, inset 0 0 10px rgba(255,255,255,0.15)` 
+                    : `0 0 8px ${overlay.color}50`,
+                }}
                 onMouseEnter={() => {
                   if (!selectedPlanet) {
                     const p = planets.find((item) => item.id === overlay.id);
@@ -1157,18 +1163,18 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
                   const p = planets.find((item) => item.id === overlay.id);
                   if (p) handlePlanetClick(p);
                 }}
-                className={`absolute px-4 py-2 rounded-2xl font-mono text-[10px] font-bold tracking-wider pointer-events-auto whitespace-nowrap transition-all duration-300 cursor-pointer shadow-2xl border backdrop-blur-md flex items-center gap-2 ${
+                className={`absolute px-3 py-1.5 rounded-xl font-mono text-[11px] sm:text-[12px] font-black tracking-wider pointer-events-auto whitespace-nowrap transition-all duration-300 cursor-pointer shadow-2xl backdrop-blur-md flex items-center gap-2 ${
                   isActive
-                    ? "bg-white text-black border-white scale-110"
-                    : "bg-zinc-950/80 text-white border-white/10 hover:border-orange-500"
+                    ? "bg-zinc-950 text-white scale-110"
+                    : "bg-zinc-950/95 text-white/95 hover:scale-105"
                 }`}
               >
                 <span
-                  className="w-2 h-2 rounded-full inline-block shrink-0 shadow-md"
+                  className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-md animate-pulse"
                   style={{ backgroundColor: overlay.color }}
                 />
                 <span>{overlay.name}</span>
-                {isSelected && <Maximize2 size={9} className="text-orange-500 ml-0.5 animate-pulse" />}
+                {isSelected && <Maximize2 size={10} className="text-orange-500 ml-0.5 animate-pulse" />}
               </button>
             );
           }
@@ -1178,13 +1184,19 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
             return (
               <button
                 key={overlay.id}
-                style={style}
+                style={{
+                  ...style,
+                  border: `1.5px solid ${overlay.color}`,
+                  boxShadow: isHovered 
+                    ? `0 0 15px ${overlay.color}, inset 0 0 6px rgba(255,255,255,0.2)` 
+                    : `0 0 6px ${overlay.color}40`,
+                }}
                 onMouseEnter={() => setHoveredMoon(overlay.refObject)}
                 onMouseLeave={() => setHoveredMoon(null)}
-                className={`absolute px-2.5 py-1.5 rounded-xl font-sans text-[9px] font-semibold tracking-wide pointer-events-auto whitespace-nowrap transition-all duration-300 cursor-pointer border shadow-lg backdrop-blur-md ${
+                className={`absolute px-2.5 py-1 rounded-lg font-sans text-[10px] sm:text-[11px] font-black tracking-wide pointer-events-auto whitespace-nowrap transition-all duration-300 cursor-pointer shadow-lg backdrop-blur-md ${
                   isHovered
-                    ? "bg-orange-500 text-white border-orange-400 scale-110 z-50 shadow-orange-500/30"
-                    : "bg-zinc-900/90 text-white/80 border-white/5 hover:border-orange-400"
+                    ? "bg-orange-500 text-white scale-115 z-50 shadow-orange-500/20"
+                    : "bg-zinc-900/95 text-white/95"
                 }`}
               >
                 {overlay.name}
