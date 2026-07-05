@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MessageSquare, X, Send, Bot, Sparkles, AlertCircle, Check } from "lucide-react";
 import { Message } from "../types";
+import AiMessageRenderer from "./AiMessageRenderer";
 
 const QUICK_QUESTIONS = [
   "What is your experience with RAG platforms?",
@@ -62,13 +63,8 @@ export default function AiRepresentative() {
       });
 
       if (!res.ok) {
-  const error = await res.json().catch(() => ({}));
-
-  throw new Error(
-    error.error ||
-      `Request failed with status ${res.status}`
-  );
-}
+        throw new Error("Could not connect to Gemini API. Ensure GEMINI_API_KEY is configured.");
+      }
 
       const data = await res.json();
       if (data.error) {
@@ -82,14 +78,11 @@ export default function AiRepresentative() {
       };
       setMessages((prev) => [...prev, modelMsg]);
     } catch (err: any) {
-  console.error(err);
-
-  setApiError(
-    err?.message ||
-      "An unexpected error occurred while contacting the AI service."
-  );
-}
-    finally {
+      console.error(err);
+      setApiError(
+        "My backend brain is offline. Please make sure the GEMINI_API_KEY is configured under Secrets, or email Kumaraswamy directly!"
+      );
+    } finally {
       setIsLoading(false);
     }
   };
@@ -145,9 +138,7 @@ export default function AiRepresentative() {
                       Kumaraswamy AI Twin
                       <Sparkles size={14} className="text-orange-400 animate-pulse" />
                     </h3>
-                    <p className="font-sans text-xs text-orange-400 font-medium">
-    Powered by Groq • Llama 3.3 70B
-</p>
+                    <p className="font-sans text-xs text-orange-400 font-medium">Powered by Gemini 2.5 Flash</p>
                   </div>
                 </div>
                 <button
@@ -160,36 +151,57 @@ export default function AiRepresentative() {
 
               {/* Chat Body */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-neutral-200 dark:scrollbar-thumb-white/10 scrollbar-track-transparent">
-                {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex ${
-                      msg.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
+                {messages.map((msg, idx) => {
+                  const isLatestModelMessage = msg.role === "model" && idx === messages.length - 1;
+                  return (
                     <div
-                      className={`max-w-[85%] rounded-2xl p-3.5 text-sm leading-relaxed font-sans ${
-                        msg.role === "user"
-                          ? "bg-orange-500 text-white rounded-tr-none"
-                          : "bg-neutral-100 dark:bg-white/5 text-neutral-800 dark:text-white/90 border border-neutral-200 dark:border-white/5 rounded-tl-none"
+                      key={idx}
+                      className={`flex ${
+                        msg.role === "user" ? "justify-end" : "justify-start"
                       }`}
                     >
-                      <div className="whitespace-pre-wrap">
-                        {msg.text}
-                      </div>
                       <div
-                        className={`text-[10px] mt-1.5 ${
-                          msg.role === "user" ? "text-orange-200" : "text-neutral-500 dark:text-white/30"
+                        className={`max-w-[90%] sm:max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed font-sans relative overflow-hidden transition-all duration-300 ${
+                          msg.role === "user"
+                            ? "bg-orange-500 text-white rounded-tr-none shadow-md shadow-orange-500/10"
+                            : "bg-neutral-50/90 dark:bg-[#0c0c0c]/85 border border-neutral-200/60 dark:border-white/5 text-neutral-800 dark:text-white/90 rounded-tl-none shadow-[0_8px_30px_rgba(0,0,0,0.03)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur-md"
                         }`}
                       >
-                        {msg.timestamp.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {msg.role === "model" && (
+                          <>
+                            {/* Accent indicator bar */}
+                            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-cyan-500 via-blue-500 to-orange-500 opacity-60" />
+                            {/* Soft visual background glow */}
+                            <div className="absolute -top-12 -left-12 w-24 h-24 bg-orange-500/5 dark:bg-orange-400/[0.03] rounded-full blur-2xl pointer-events-none" />
+                          </>
+                        )}
+                        
+                        <div>
+                          {msg.role === "user" ? (
+                            <div className="whitespace-pre-wrap">{msg.text}</div>
+                          ) : (
+                            <AiMessageRenderer 
+                              text={msg.text} 
+                              isLatest={isLatestModelMessage} 
+                            />
+                          )}
+                        </div>
+                        
+                        <div
+                          className={`text-[9px] font-mono mt-2.5 flex items-center justify-end gap-1 ${
+                            msg.role === "user" ? "text-orange-200" : "text-neutral-400 dark:text-white/30"
+                          }`}
+                        >
+                          {msg.role === "model" && <Sparkles size={10} className="text-orange-400 animate-pulse" />}
+                          {msg.timestamp.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {isLoading && (
                   <div className="flex justify-start">
