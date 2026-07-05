@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Sparkles, Terminal, Code2, Cpu, ArrowLeft, Maximize2, 
-  RotateCcw, Sliders, Play, Pause, ZoomIn, ZoomOut, Compass, Info, Check, Globe
+  RotateCcw, Sliders, Play, Pause, ZoomIn, ZoomOut, Compass, Info, Check, Globe, Orbit
 } from "lucide-react";
 
 interface Moon {
@@ -102,6 +102,50 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
 
   // Big Bang ignition intro animation
   const introProgressRef = useRef<number>(0);
+
+  const livePositionsRef = useRef<{ [key: string]: { x: number; y: number; z: number } }>({});
+  const core3DPosRef = useRef<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 });
+
+  // Majestic cinematic galaxy transition state machine
+  const [transitionPhase, setTransitionPhase] = useState<"local" | "pulsing" | "bending" | "hyperspace" | "decelerate" | "galaxy">("local");
+  const [transitionProgress, setTransitionProgress] = useState<number>(0);
+  const transitionPhaseRef = useRef<string>("local");
+
+  useEffect(() => {
+    transitionPhaseRef.current = transitionPhase;
+  }, [transitionPhase]);
+
+  const startGalaxyTransition = () => {
+    if (transitionPhaseRef.current !== "local") return;
+    
+    // Clear selections before initiating jump
+    setSelectedPlanet(null);
+    setHoveredPlanet(null);
+    setHoveredMoon(null);
+    setCameraAutopilot(true);
+
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 2500) {
+        setTransitionPhase("pulsing");
+        setTransitionProgress(elapsed / 2500);
+      } else if (elapsed < 5000) {
+        setTransitionPhase("bending");
+        setTransitionProgress((elapsed - 2500) / 2500);
+      } else if (elapsed < 8000) {
+        setTransitionPhase("hyperspace");
+        setTransitionProgress((elapsed - 5000) / 3000);
+      } else if (elapsed < 10500) {
+        setTransitionPhase("decelerate");
+        setTransitionProgress((elapsed - 8000) / 2500);
+      } else {
+        setTransitionPhase("galaxy");
+        setTransitionProgress(1.0);
+        clearInterval(interval);
+      }
+    }, 16);
+  };
 
   // Dynamic overlays storage
   const [overlays, setOverlays] = useState<Array<{
@@ -431,6 +475,52 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
       });
     }
 
+    // Pre-generate majestic rotating galaxy spiral arm stars
+    let localGalaxyStars: Array<{
+      r: number;
+      theta: number;
+      y: number;
+      size: number;
+      color: string;
+      speed: number;
+    }> = [];
+
+    const numGalaxyStars = 650;
+    const colors = [
+      "rgba(168, 85, 247, ", // Violet
+      "rgba(59, 130, 246, ",  // Blue
+      "rgba(249, 115, 22, ",  // Orange
+      "rgba(255, 255, 255, "  // White
+    ];
+
+    for (let i = 0; i < numGalaxyStars; i++) {
+      const arm = i % 4;
+      const r = Math.random() * 320 + 35; // radius from center
+      const theta = arm * (Math.PI / 2) + (r * 0.012) + (Math.random() - 0.5) * 0.42; // logarithmic winding with scatter
+      const y = (Math.random() - 0.5) * 24 * (1 - r / 320); // flat disc thickness decreasing at edges
+      const size = Math.random() * 1.2 + 0.3;
+      
+      let color = colors[Math.floor(Math.random() * colors.length)];
+      if (r < 110) {
+        // Core is hot white/violet
+        color = Math.random() > 0.4 ? colors[0] : colors[3];
+      } else if (r > 240) {
+        // Outer arms are colder orange/blue
+        color = Math.random() > 0.5 ? colors[1] : colors[2];
+      }
+      
+      const alpha = Math.random() * 0.55 + 0.2;
+      
+      localGalaxyStars.push({
+        r,
+        theta,
+        y,
+        size,
+        color: `${color}${alpha})`,
+        speed: 0.012 / (1.0 + r * 0.003) // differential rotation speed (inner stars rotate faster!)
+      });
+    }
+
     // Trails history tracking structures to draw helical spirals
     const trailsHistory: { [key: string]: { x: number; y: number; z: number }[] } = {};
     planets.forEach((p) => {
@@ -486,11 +576,70 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
         camera.targetPitch = 0.85 + mouse.y * 0.4 + slowDriftPitch;
       }
 
-      // Focused cinematic planet camera locks with zoom breathing
-      if (selectedPlanet) {
-        camera.targetZoom = (w < 768 ? 1.4 : 1.75) + zoomBreathing;
+      const activePhase = transitionPhaseRef.current;
+
+      // Phase-dependent dynamic camera controls
+      if (activePhase === "local") {
+        if (selectedPlanet) {
+          const pFocused = livePositionsRef.current[selectedPlanet.id];
+          if (pFocused) {
+            camera.targetFocusX = pFocused.x;
+            camera.targetFocusY = pFocused.y;
+            camera.targetFocusZ = pFocused.z;
+          }
+          camera.targetZoom = (w < 768 ? 1.4 : 1.75) + zoomBreathing;
+        } else {
+          camera.targetFocusX = core3DPosRef.current.x;
+          camera.targetFocusY = core3DPosRef.current.y;
+          camera.targetFocusZ = core3DPosRef.current.z;
+          camera.targetZoom = (w < 768 ? 0.6 : 0.8) + zoomBreathing;
+        }
+      } else if (activePhase === "pulsing") {
+        camera.targetFocusX = 0;
+        camera.targetFocusY = 0;
+        camera.targetFocusZ = 0;
+        camera.targetZoom = (w < 768 ? 0.75 : 0.95) + Math.sin(timeRef.current * 5.0) * 0.04; // pulsing feel
+      } else if (activePhase === "bending") {
+        camera.targetFocusX = 0;
+        camera.targetFocusY = 0;
+        camera.targetFocusZ = 0;
+        camera.targetZoom = 2.4 + transitionProgress * 0.4; // deep dive lock-on zoom
+      } else if (activePhase === "hyperspace") {
+        camera.targetFocusX = 0;
+        camera.targetFocusY = 0;
+        camera.targetFocusZ = 0;
+        camera.targetZoom = 2.8 - transitionProgress * 2.2; // fly past, zoom out fast
+      } else if (activePhase === "decelerate") {
+        const coreOrbitAngle = timeRef.current * 0.04;
+        const coreWobbleY = Math.sin(timeRef.current * 0.25) * 8.0;
+        const coreWobbleRadius = 220 + Math.sin(timeRef.current * 0.15) * 15.0;
+        const finalCore3DX = coreWobbleRadius * Math.cos(coreOrbitAngle);
+        const finalCore3DZ = coreWobbleRadius * Math.sin(coreOrbitAngle);
+        const finalCore3DY = coreWobbleY;
+
+        // Smoothly shift camera anchor from local core to central Galactic Nexus (0,0,0)
+        camera.targetFocusX = finalCore3DX * (1.0 - transitionProgress);
+        camera.targetFocusY = finalCore3DY * (1.0 - transitionProgress);
+        camera.targetFocusZ = finalCore3DZ * (1.0 - transitionProgress);
+        camera.targetZoom = 0.38 + transitionProgress * 0.08; // exit hyperspace, wide angle
       } else {
-        camera.targetZoom = (w < 768 ? 0.6 : 0.8) + zoomBreathing;
+        // GALAXY ACTIVE MODE:
+        // Anchor camera focus destination on focused planet or the center Core, or the whole Galaxy
+        if (selectedPlanet) {
+          const pFocused = livePositionsRef.current[selectedPlanet.id];
+          if (pFocused) {
+            camera.targetFocusX = pFocused.x;
+            camera.targetFocusY = pFocused.y;
+            camera.targetFocusZ = pFocused.z;
+          }
+          camera.targetZoom = (w < 768 ? 1.3 : 1.6) + zoomBreathing;
+        } else {
+          // Focus the central Galactic Energy Nexus (0, 0, 0)
+          camera.targetFocusX = 0;
+          camera.targetFocusY = 0;
+          camera.targetFocusZ = 0;
+          camera.targetZoom = (w < 768 ? 0.36 : 0.44) + zoomBreathing;
+        }
       }
 
       // Smooth camera interpolation variables
@@ -502,8 +651,13 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
       camera.focusZ += (camera.targetFocusZ - camera.focusZ) * 0.07;
 
       // Draw galactic black hole backdrop
-      ctx.fillStyle = "#020205";
-      ctx.fillRect(0, 0, w, h);
+      if (activePhase === "hyperspace") {
+        ctx.fillStyle = "rgba(2, 2, 5, 0.20)"; // leaves beautiful ghost trails for motion blur
+        ctx.fillRect(0, 0, w, h);
+      } else {
+        ctx.fillStyle = "#020205";
+        ctx.fillRect(0, 0, w, h);
+      }
 
       // SPA 3D Projection Engine coordinates calculations
       const project = (x3d: number, y3d: number, z3d: number) => {
@@ -532,11 +686,34 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
         };
       };
 
-      // Vector coordinates of traveling Core (The mini-star)
-      // Moving continuously through space on elegant 3D loop!
-      const core3DX = Math.sin(timeRef.current * 0.75) * 38 * introProgressRef.current;
-      const core3DY = Math.cos(timeRef.current * 0.55) * 12 * introProgressRef.current;
-      const core3DZ = Math.sin(timeRef.current * 0.35) * 22 * introProgressRef.current;
+      // Vector coordinates of traveling Core (The solar system's star)
+      let core3DX = 0;
+      let core3DY = 0;
+      let core3DZ = 0;
+
+      if (activePhase === "local" || activePhase === "pulsing" || activePhase === "bending" || activePhase === "hyperspace") {
+        let localScale = 1.0;
+        if (activePhase === "hyperspace") {
+          localScale = Math.max(0.001, 1.0 - transitionProgress);
+        }
+        core3DX = Math.sin(timeRef.current * 0.75) * 15 * introProgressRef.current * localScale;
+        core3DY = Math.cos(timeRef.current * 0.55) * 5 * introProgressRef.current * localScale;
+        core3DZ = Math.sin(timeRef.current * 0.35) * 10 * introProgressRef.current * localScale;
+      } else {
+        // Core orbits the Galactic Energy Nexus (0,0,0) majestically
+        const coreOrbitAngle = timeRef.current * 0.04;
+        const coreWobbleY = Math.sin(timeRef.current * 0.25) * 8.0;
+        const coreWobbleRadius = 220 + Math.sin(timeRef.current * 0.15) * 15.0;
+        
+        // During deceleration phase, we smoothly scale up the galaxy's orbit radius
+        const radialScale = activePhase === "decelerate" ? Math.min(1.0, transitionProgress) : 1.0;
+        
+        core3DX = coreWobbleRadius * Math.cos(coreOrbitAngle) * radialScale;
+        core3DZ = coreWobbleRadius * Math.sin(coreOrbitAngle) * radialScale;
+        core3DY = coreWobbleY * radialScale;
+      }
+
+      core3DPosRef.current = { x: core3DX, y: core3DY, z: core3DZ };
 
       // Main drawing stack for painters depth sorting
       const renderStack: Array<{
@@ -628,15 +805,79 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
           renderStack.push({
             depth: p.depth + 200, // Background layer sorting
             draw: () => {
-              const pulse = 1.0 + Math.sin(timeRef.current * 1.5 + star.phase) * 0.25;
-              ctx.beginPath();
-              ctx.arc(p.x, p.y, star.size * p.scale * pulse * introProgressRef.current, 0, Math.PI * 2);
-              ctx.fillStyle = star.color;
-              ctx.fill();
+              const isHyperspace = activePhase === "hyperspace";
+              const isBending = activePhase === "bending";
+
+              if (isHyperspace) {
+                // Star stretches into a light trail radially away from the screen center
+                const dx = p.x - cx;
+                const dy = p.y - cy;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const ndx = dx / (dist || 1);
+                const ndy = dy / (dist || 1);
+                
+                const stretch = star.size * 32.0 * transitionProgress * p.scale;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x + ndx * stretch, p.y + ndy * stretch);
+                ctx.strokeStyle = star.color;
+                ctx.lineWidth = star.size * p.scale * 1.5;
+                ctx.stroke();
+              } else if (isBending) {
+                // Space bending effect: slightly pull stars outwards or inwards
+                const dx = p.x - cx;
+                const dy = p.y - cy;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const ndx = dx / (dist || 1);
+                const ndy = dy / (dist || 1);
+
+                const pull = transitionProgress * 18 * p.scale;
+                ctx.beginPath();
+                ctx.arc(p.x + ndx * pull, p.y + ndy * pull, star.size * p.scale * 1.25, 0, Math.PI * 2);
+                ctx.fillStyle = star.color;
+                ctx.fill();
+              } else {
+                // Standard twinkling star
+                const pulse = 1.0 + Math.sin(timeRef.current * 1.5 + star.phase) * 0.25;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, star.size * p.scale * pulse * introProgressRef.current, 0, Math.PI * 2);
+                ctx.fillStyle = star.color;
+                ctx.fill();
+              }
             }
           });
         }
       });
+
+      // Draw majestic rotating galaxy spiral arm stars
+      const galaxyOpacity = activePhase === "galaxy" ? 1.0 : (activePhase === "decelerate" ? transitionProgress : 0.0);
+      if (galaxyOpacity > 0.0) {
+        localGalaxyStars.forEach((gs) => {
+          gs.theta += gs.speed * simSpeed;
+          
+          const gx = gs.r * Math.cos(gs.theta);
+          const gz = gs.r * Math.sin(gs.theta);
+          
+          const p = project(gx, gs.y, gz);
+          
+          if (p.x >= 0 && p.x <= w && p.y >= 0 && p.y <= h) {
+            renderStack.push({
+              depth: p.depth + 210, // slightly behind main planets but in front of nebula
+              draw: () => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, gs.size * p.scale * introProgressRef.current, 0, Math.PI * 2);
+                // Blend color alpha dynamically
+                const cleanedColor = gs.color.replace(/rgba\((.*),\s*([0-9\.]+)\)/, (_, rgb, alpha) => {
+                  const finalAlpha = parseFloat(alpha) * galaxyOpacity;
+                  return `rgba(${rgb}, ${finalAlpha})`;
+                });
+                ctx.fillStyle = cleanedColor;
+                ctx.fill();
+              }
+            });
+          }
+        });
+      }
 
       // Track positions for HTML overlays
       const livePositions: { [key: string]: { x: number; y: number; z: number } } = {};
@@ -644,7 +885,17 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
 
       // Calculate planets coordinates
       planets.forEach((p) => {
-        const radius = p.orbitRadius;
+        // Majestic cinematic local systems scaling
+        let localScale = 1.0;
+        if (activePhase === "hyperspace") {
+          localScale = Math.max(0.001, 1.0 - transitionProgress);
+        } else if (activePhase === "decelerate") {
+          localScale = 0.001; // extremely tiny
+        } else if (activePhase === "galaxy") {
+          localScale = 0.85; // perfect galactic proportion
+        }
+
+        const radius = p.orbitRadius * localScale;
         
         // Dynamic angle calculation with hover/focus pausing
         const initAngle = (planets.indexOf(p) * Math.PI * 2) / planets.length;
@@ -655,10 +906,13 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
         const isHover = hoveredPlanet?.id === p.id;
         const isFocus = selectedPlanet?.id === p.id;
 
+        // Accelerate orbits during pulsing phase to communicate build-up of energy
+        const speedMultiplierPhase = activePhase === "pulsing" ? 1.8 : 1.0;
+
         // If not paused, advance orbital angle with smooth speed modulation
         if (!isHover && !isFocus) {
           const currentAngle = planetAnglesRef.current[p.id];
-          const speedMultiplier = 1.0 + Math.sin(currentAngle) * 0.15; // Smooth acceleration and deceleration
+          const speedMultiplier = (1.0 + Math.sin(currentAngle) * 0.15) * speedMultiplierPhase;
           planetAnglesRef.current[p.id] = currentAngle + (dt * p.orbitSpeed * speedMultiplier);
         }
 
@@ -666,28 +920,49 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
 
         // Tilted plane with slight inclination sway and gentle gravitational wobble
         const inclinationWobble = p.inclination + Math.sin(timeRef.current * 1.2 + planets.indexOf(p)) * 0.015;
-        const wobbleRadius = radius + Math.sin(timeRef.current * 2.0 + planets.indexOf(p)) * 3.5;
+        const wobbleRadius = radius + Math.sin(timeRef.current * 2.0 + planets.indexOf(p)) * 3.5 * localScale;
 
         // Floating drift behavior
-        const driftX = Math.sin(timeRef.current * 0.45 + planets.indexOf(p)) * 3.0;
-        const driftY = Math.cos(timeRef.current * 0.35 + planets.indexOf(p)) * 2.0;
-        const driftZ = Math.sin(timeRef.current * 0.25 + planets.indexOf(p)) * 3.0;
+        const driftX = Math.sin(timeRef.current * 0.45 + planets.indexOf(p)) * 3.0 * localScale;
+        const driftY = Math.cos(timeRef.current * 0.35 + planets.indexOf(p)) * 2.0 * localScale;
+        const driftZ = Math.sin(timeRef.current * 0.25 + planets.indexOf(p)) * 3.0 * localScale;
 
         // Elliptical coordinate formulas with inclined slant
         const localX = (wobbleRadius * Math.cos(angle) + driftX) * p.eccentricity;
         const localZ = wobbleRadius * Math.sin(angle) * Math.cos(inclinationWobble) + driftZ;
         const localY = wobbleRadius * Math.sin(angle) * Math.sin(inclinationWobble) + driftY;
 
-        // Spring lag coordinates tracing the moving Core (creates beautiful helical trailing)
-        const lagCoreX = Math.sin((timeRef.current - p.delay * 0.05) * 0.75) * 38 * introProgressRef.current;
-        const lagCoreY = Math.cos((timeRef.current - p.delay * 0.05) * 0.55) * 12 * introProgressRef.current;
-        const lagCoreZ = Math.sin((timeRef.current - p.delay * 0.05) * 0.35) * 22 * introProgressRef.current;
+        // Core tracking with lag
+        let lagCoreX = 0;
+        let lagCoreY = 0;
+        let lagCoreZ = 0;
+
+        if (activePhase === "local" || activePhase === "pulsing" || activePhase === "bending" || activePhase === "hyperspace") {
+          const lagTime = timeRef.current - p.delay * 0.05;
+          lagCoreX = Math.sin(lagTime * 0.75) * 15 * introProgressRef.current * localScale;
+          lagCoreY = Math.cos(lagTime * 0.55) * 5 * introProgressRef.current * localScale;
+          lagCoreZ = Math.sin(lagTime * 0.35) * 10 * introProgressRef.current * localScale;
+        } else {
+          // In the galaxy view, the Core orbits the central Galactic Nexus (0,0,0)
+          // The planets trail behind it in a gorgeous helical spiral
+          const lagTime = timeRef.current - p.delay * 0.15;
+          const lagAngle = lagTime * 0.04;
+          const lagWobbleY = Math.sin(lagTime * 0.25) * 8.0;
+          const lagWobbleRadius = 220 + Math.sin(lagTime * 0.15) * 15.0;
+          
+          const radialScale = activePhase === "decelerate" ? Math.min(1.0, transitionProgress) : 1.0;
+          
+          lagCoreX = lagWobbleRadius * Math.cos(lagAngle) * radialScale;
+          lagCoreZ = lagWobbleRadius * Math.sin(lagAngle) * radialScale;
+          lagCoreY = lagWobbleY * radialScale;
+        }
 
         const planetX = lagCoreX + localX;
         const planetY = lagCoreY + localY;
         const planetZ = lagCoreZ + localZ;
 
         livePositions[p.id] = { x: planetX, y: planetY, z: planetZ };
+        livePositionsRef.current[p.id] = livePositions[p.id];
 
         // Save trails history
         if (showOrbitTrails) {
@@ -696,20 +971,6 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
           if (trail.length > 50) trail.shift();
         }
       });
-
-      // Anchor camera focus destination on focused planet or the center Core
-      if (selectedPlanet) {
-        const pFocused = livePositions[selectedPlanet.id];
-        if (pFocused) {
-          camera.targetFocusX = pFocused.x;
-          camera.targetFocusY = pFocused.y;
-          camera.targetFocusZ = pFocused.z;
-        }
-      } else {
-        camera.targetFocusX = core3DX;
-        camera.targetFocusY = core3DY;
-        camera.targetFocusZ = core3DZ;
-      }
 
       // Draw Orbit Trails
       if (showOrbitTrails) {
@@ -795,6 +1056,75 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
         }
       });
 
+      // Draw Galactic Energy Nexus (at 0,0,0) in decelerate & galaxy phases
+      if (galaxyOpacity > 0.0) {
+        const pNexus = project(0, 0, 0);
+        renderStack.push({
+          depth: pNexus.depth,
+          draw: () => {
+            const nexusRadius = 55 * pNexus.scale * introProgressRef.current;
+            if (nexusRadius <= 0) return;
+
+            // Singularity glowing core
+            ctx.save();
+            ctx.shadowBlur = 40;
+            ctx.shadowColor = `rgba(168, 85, 247, ${0.5 * galaxyOpacity})`;
+
+            const nexusGrad = ctx.createRadialGradient(
+              pNexus.x, pNexus.y, nexusRadius * 0.1,
+              pNexus.x, pNexus.y, nexusRadius * 1.8
+            );
+            nexusGrad.addColorStop(0, `rgba(255, 255, 255, ${galaxyOpacity})`);
+            nexusGrad.addColorStop(0.2, `rgba(168, 85, 247, ${0.9 * galaxyOpacity})`); // violet
+            nexusGrad.addColorStop(0.5, `rgba(59, 130, 246, ${0.6 * galaxyOpacity})`); // blue
+            nexusGrad.addColorStop(0.8, `rgba(249, 115, 22, ${0.25 * galaxyOpacity})`); // orange outer halo
+            nexusGrad.addColorStop(1.0, "rgba(249, 115, 22, 0)");
+
+            ctx.beginPath();
+            ctx.arc(pNexus.x, pNexus.y, nexusRadius * 1.8, 0, Math.PI * 2);
+            ctx.fillStyle = nexusGrad;
+            ctx.fill();
+            ctx.restore();
+
+            // Majestic accretion rings
+            const numRings = 3;
+            for (let r = 0; r < numRings; r++) {
+              const ringAngle = timeRef.current * 0.15 * (1.0 - r * 0.2) + r * Math.PI / 3;
+              const rx = nexusRadius * (2.2 + r * 0.6);
+              const ry = nexusRadius * (0.5 + r * 0.15);
+              ctx.beginPath();
+              ctx.ellipse(pNexus.x, pNexus.y, rx, ry, ringAngle, 0, Math.PI * 2);
+              
+              const ringColor = r === 0 
+                ? `rgba(168, 85, 247, ${0.35 * galaxyOpacity})` 
+                : r === 1 
+                  ? `rgba(59, 130, 246, ${0.25 * galaxyOpacity})` 
+                  : `rgba(249, 115, 22, ${0.15 * galaxyOpacity})`;
+                  
+              ctx.strokeStyle = ringColor;
+              ctx.lineWidth = (2.0 - r * 0.4) * pNexus.scale;
+              ctx.stroke();
+            }
+
+            // Central gravity dust pull lines
+            const numSingularityFlares = 8;
+            for (let f = 0; f < numSingularityFlares; f++) {
+              const flareAngle = -timeRef.current * 0.35 + (f * Math.PI * 2) / numSingularityFlares;
+              const len = nexusRadius * (1.4 + Math.sin(timeRef.current * 4.0 + f) * 0.15);
+              const fx = pNexus.x + Math.cos(flareAngle) * len;
+              const fy = pNexus.y + Math.sin(flareAngle) * len;
+
+              ctx.beginPath();
+              ctx.moveTo(pNexus.x, pNexus.y);
+              ctx.lineTo(fx, fy);
+              ctx.strokeStyle = `rgba(168, 85, 247, ${(0.4 - f * 0.03) * galaxyOpacity})`;
+              ctx.lineWidth = 1.5 * pNexus.scale;
+              ctx.stroke();
+            }
+          }
+        });
+      }
+
       // Push solar Core overlay tracking data
       localOverlays.push({
         id: "core-center",
@@ -804,7 +1134,7 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
         y: pCore.y,
         scale: pCore.scale,
         zIndex: Math.floor((100 - pCore.depth) * 2),
-        opacity: selectedPlanet ? 0.25 : Math.max(0.4, Math.min(1, pCore.scale * 1.2)),
+        opacity: (activePhase === "galaxy") ? (selectedPlanet ? 0.25 : Math.max(0.4, Math.min(1, pCore.scale * 1.2))) : 0.0,
         color: "#F97316",
         active: !selectedPlanet
       });
@@ -1017,7 +1347,7 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
           y: pProj.y + p.size * pProj.scale + 18,
           scale: pProj.scale,
           zIndex: Math.floor((120 - pProj.depth) * 2),
-          opacity: selectedPlanet && !isFocus ? 0.25 : Math.max(0.75, Math.min(1, pProj.scale * 1.25)),
+          opacity: (activePhase === "galaxy") ? (selectedPlanet && !isFocus ? 0.25 : Math.max(0.75, Math.min(1, pProj.scale * 1.25))) : 0.0,
           color: p.color,
           active: isFocus || (isHover && !selectedPlanet)
         });
@@ -1089,7 +1419,7 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
               y: mProj.y + 12,
               scale: mProj.scale,
               zIndex: Math.floor((130 - mProj.depth) * 2),
-              opacity: hoveredMoon && !isMoonHover ? 0.35 : Math.max(0.75, Math.min(1, mProj.scale * 1.25)),
+              opacity: (activePhase === "galaxy") ? (hoveredMoon && !isMoonHover ? 0.35 : Math.max(0.75, Math.min(1, mProj.scale * 1.25))) : 0.0,
               color: p.color,
               active: isMoonHover,
               refObject: moon
@@ -1116,6 +1446,9 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
 
   // Click handler to select planet
   const handlePlanetClick = (p: Planet) => {
+    if (navigator.vibrate) {
+      navigator.vibrate(15);
+    }
     if (selectedPlanet?.id === p.id) {
       setSelectedPlanet(null);
       setHoveredMoon(null);
@@ -1311,8 +1644,9 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
       <div className="flex-1 flex flex-col lg:flex-row justify-between items-stretch px-6 lg:px-8 gap-6 z-10 relative pointer-events-none">
         
         {/* LEFT COLUMN: Astronomical Interactive Console Controller */}
-        <div className="w-full lg:w-[260px] self-center flex flex-col gap-4 bg-zinc-950/70 border border-white/5 p-5 rounded-3xl backdrop-blur-md pointer-events-auto shadow-2xl transition-all">
-          <div className="flex items-center gap-2 pb-3 border-b border-white/5 text-orange-500">
+        {(transitionPhase === "galaxy" || transitionPhase === "local") ? (
+          <div className="w-full lg:w-[260px] self-center flex flex-col gap-4 bg-zinc-950/70 border border-white/5 p-5 rounded-3xl backdrop-blur-md pointer-events-auto shadow-2xl transition-all">
+            <div className="flex items-center gap-2 pb-3 border-b border-white/5 text-orange-500">
             <Sliders size={13} />
             <span className="font-mono text-[10px] uppercase tracking-widest font-black">Simulation Dials</span>
           </div>
@@ -1411,12 +1745,16 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
             </button>
           </div>
         </div>
+        ) : (
+          <div className="w-full lg:w-[260px] pointer-events-none" />
+        )}
 
         {/* MIDDLE: Hidden spacer or focus details */}
         <div className="flex-1 min-h-[50px] lg:min-h-0 pointer-events-none" />
 
         {/* RIGHT COLUMN: Stellar Information Dossier Panel */}
-        <div className="w-full lg:w-[350px] self-center pointer-events-auto">
+        {(transitionPhase === "galaxy" || transitionPhase === "local") ? (
+          <div className="w-full lg:w-[350px] self-center pointer-events-auto">
           <AnimatePresence mode="wait">
             {activePlanet && (
               <motion.div
@@ -1630,7 +1968,90 @@ export default function ImmersiveSkillsUniverse({ onClose, theme }: ImmersiveSki
             )}
           </AnimatePresence>
         </div>
+        ) : (
+          <div className="w-full lg:w-[350px] pointer-events-none" />
+        )}
       </div>
+
+      {/* Cinematic Transition HUD Overlay Console */}
+      {transitionPhase !== "galaxy" && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/10 pointer-events-none select-none p-6">
+          <AnimatePresence mode="wait">
+            {transitionPhase === "local" ? (
+              <motion.div
+                key="local-jump-panel"
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -15 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="pointer-events-auto bg-[#04040a]/90 border border-orange-500/20 p-8 sm:p-10 rounded-3xl backdrop-blur-xl text-center max-w-sm shadow-2xl flex flex-col items-center gap-6"
+              >
+                <div className="relative">
+                  <div className="absolute -inset-2 bg-orange-500/25 rounded-full blur-md animate-pulse" />
+                  <div className="w-14 h-14 rounded-full border border-orange-500/40 bg-orange-500/10 flex items-center justify-center text-orange-400 relative">
+                    <Sparkles size={24} className="animate-spin [animation-duration:12s]" />
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="font-sans font-black text-lg tracking-tight text-white uppercase mb-1.5">
+                    Engineering Solar System
+                  </h2>
+                  <p className="font-mono text-[9px] text-white/50 tracking-wider uppercase leading-relaxed max-w-xs">
+                    You are currently viewing a localized technology sphere. Initiate hyper-vector coordinates to explore the full engineering galaxy.
+                  </p>
+                </div>
+
+                <button
+                  onClick={startGalaxyTransition}
+                  className="px-6 py-3.5 bg-orange-500 hover:bg-orange-400 text-white font-mono text-[10px] uppercase tracking-[0.2em] rounded-2xl cursor-pointer shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all active:scale-95 duration-300 border border-orange-400/30 flex items-center gap-2 font-black"
+                >
+                  <Orbit size={13} className="animate-spin [animation-duration:3s]" />
+                  Explore Full Galaxy
+                </button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={transitionPhase}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="text-center font-mono space-y-4 max-w-sm bg-black/60 px-6 py-5 rounded-2xl border border-white/5 backdrop-blur-md"
+              >
+                <div className="flex justify-center items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping" />
+                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping [animation-delay:0.1s]" />
+                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping [animation-delay:0.2s]" />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-[10px] font-black tracking-widest text-orange-500 uppercase">
+                    {transitionPhase === "pulsing" && "WARPING COHERENCE FIELD"}
+                    {transitionPhase === "bending" && "BENDING GRAVITATIONAL CONSTANTS"}
+                    {transitionPhase === "hyperspace" && "HYPERSPACE COGNITIVE FLUX"}
+                    {transitionPhase === "decelerate" && "DE-THROTTLING CHRONO-FIELDS"}
+                  </div>
+                  <div className="text-[8px] text-white/40 tracking-widest uppercase">
+                    {transitionPhase === "pulsing" && "STABILIZING SYSTEM PHYSICS CORE - COIL RATE 1.8X"}
+                    {transitionPhase === "bending" && "DEFLECTING SPACE-TIME INTERPOLATION - RADIAL LOCK"}
+                    {transitionPhase === "hyperspace" && "JUMP IN PROGRESS - LIGHT TRAILS ENGAGED"}
+                    {transitionPhase === "decelerate" && "ENTERING GALACTIC MATRIX - HARMONIC SILENCE"}
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-48 h-[3px] bg-white/10 rounded-full mx-auto overflow-hidden relative border border-white/5">
+                  <motion.div 
+                    className="h-full bg-orange-500 rounded-full"
+                    style={{ width: `${transitionProgress * 100}%` }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* BOTTOM FOOTER STATUS BAR */}
       <div className="z-10 relative flex items-center justify-between px-6 py-3 border-t border-white/5 bg-[#020205] text-[9px] font-mono text-white/30 uppercase tracking-widest pointer-events-none">
