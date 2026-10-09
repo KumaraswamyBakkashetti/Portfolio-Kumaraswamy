@@ -195,6 +195,7 @@ export default function Experience() {
         </p>
       </div>
 
+
       {/* Main Experience Showcase Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
