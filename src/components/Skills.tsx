@@ -25,6 +25,7 @@ export default function Skills({ onEnterImmersive }: SkillsProps) {
       name: "AI & Machine Learning",
       icon: <Cpu size={16} />,
       skills: [
+        { name: "Agentic Workflows", level: "Expert", description: "Autonomous Jira ticket extraction, requirement analysis, automated solving & deployment." },
         { name: "Large Language Models", level: "Expert", description: "Prompt optimization, system engineering, and structured outputs." },
         { name: "RAG Platform", level: "Expert", description: "Embeddings, semantic retrieval, indexing, chunking, and metadata routing." },
         { name: "Multi-Agent Systems", level: "Advanced", description: "Autonomous orchestration, safe execution frameworks, and collaboration loops." },
@@ -51,6 +52,7 @@ export default function Skills({ onEnterImmersive }: SkillsProps) {
       name: "Backend Engineering",
       icon: <Server size={16} />,
       skills: [
+        { name: "Spring Boot", level: "Expert", description: "Enterprise Java backend, dependency injection, REST services, and scalable microservices." },
         { name: "FastAPI", level: "Expert", description: "High-performance REST APIs, background tasks, and automatic documentation." },
         { name: "Flask", level: "Advanced", description: "Microservices design, route routing, and session state engines." },
         { name: "Node.js", level: "Expert", description: "Asynchronous runtime loops, local modules, and custom micro-servers." },

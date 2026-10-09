@@ -5,9 +5,10 @@ import { Message } from "../types";
 import AiMessageRenderer from "./AiMessageRenderer";
 
 const QUICK_QUESTIONS = [
+  "Tell me about your Jira agentic flow at Zeta Global.",
+  "What did you build with Spring Boot and Python at Zeta Global?",
   "What is your experience with RAG platforms?",
   "Tell me about AgentMonitor's safety framework.",
-  "How did you perform at the Deutsche Börse Hackathon?",
   "What backend technologies are you strongest in?",
 ];
 
@@ -16,7 +17,7 @@ export default function AiRepresentative() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "model",
-      text: "Hello! I am Kumaraswamy's AI Twin. 🤖✨\n\nI can tell you all about his technical skills in AI & Backend Systems, his research in table transformations, or his hackathon achievements. What would you like to know?",
+      text: "Hello! I am Kumaraswamy's AI Twin. 🤖✨\n\nI can tell you all about his Software Engineer Internship at Aptroid Consulting / Zeta Global (including his Spring Boot & Python backend systems and his autonomous Jira agentic flow), his technical expertise in AI & Backend Systems, or his hackathon achievements. What would you like to know?",
       timestamp: new Date(),
     },
   ]);
@@ -62,13 +63,10 @@ export default function AiRepresentative() {
         body: JSON.stringify({ message: textToSend, history }),
       });
 
-      if (!res.ok) {
-        throw new Error("Could not connect to Gemini API. Ensure GEMINI_API_KEY is configured.");
-      }
+      const data = await res.json().catch(() => null);
 
-      const data = await res.json();
-      if (data.error) {
-        throw new Error(data.error);
+      if (!res.ok || !data?.text) {
+        throw new Error(data?.error || "Could not connect to AI service.");
       }
 
       const modelMsg: Message = {

@@ -1,8 +1,16 @@
 import { motion } from "motion/react";
-import { GraduationCap, Award, Calendar, BookOpen, Trophy, Zap, Terminal } from "lucide-react";
+import { GraduationCap, Award, Calendar, BookOpen, Trophy, Zap, Terminal, Briefcase } from "lucide-react";
 
 export default function EducationAndTimeline() {
   const achievements = [
+    {
+      year: "Aug 2026 - Present",
+      title: "Software Engineer Intern at Aptroid / Zeta Global",
+      subtitle: "Deep Programming, Systems Thinking & Agentic AI",
+      description: "Engineering backend microservices with Spring Boot and Python. Architected an autonomous agentic flow utilizing LLMs for automatic Jira ticket extraction, deep requirement analysis, automated solving, and CI/CD deployment.",
+      icon: <Briefcase className="text-orange-500" size={16} />,
+      tag: "Career Milestone",
+    },
     {
       year: "2024",
       title: "Deutsche Börse Group Hackathon Finalist",

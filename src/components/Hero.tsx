@@ -15,7 +15,7 @@ export default function Hero({ onExploreProjects, onOpenAiChat, theme }: HeroPro
       className="relative min-h-screen flex items-center justify-center pt-24 overflow-hidden transition-colors duration-300"
     >
       {/* 3D Rotating Generative Morphing Mesh Sphere Overlay */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.42] sm:opacity-[0.52] mix-blend-screen light:mix-blend-multiply select-none z-0">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.80] sm:opacity-[0.90] mix-blend-screen light:mix-blend-multiply select-none z-0">
         <GenerativeMesh className="w-[100vw] h-[100vh] max-w-full max-h-full" isLightMode={theme === "light"} />
       </div>
 
@@ -32,8 +32,8 @@ export default function Hero({ onExploreProjects, onOpenAiChat, theme }: HeroPro
           transition={{ duration: 0.6 }}
           className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 light:bg-black/5 border border-white/10 light:border-black/10 rounded-full text-white/80 light:text-black/80 mb-8"
         >
-          <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></span>
-          <span className="text-[10px] uppercase tracking-widest text-white/60 light:text-black/60">Ready for Software Engineering Opportunities</span>
+          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+          <span className="text-[10px] uppercase tracking-widest text-white/60 light:text-black/60">Software Engineer Intern @ Zeta Global</span>
         </motion.div>
 
         {/* Display Monogram Name subtitle */}
@@ -58,7 +58,7 @@ export default function Hero({ onExploreProjects, onOpenAiChat, theme }: HeroPro
           <span className="text-orange-500 font-extrabold">
             AI & Backend Systems
           </span>
-          <span className="text-white/80 light:text-black/85">.</span>
+          <span className="text-white/80 light:text-black/85"></span>
         </motion.h1>
 
         {/* Dynamic Subheading */}

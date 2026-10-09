@@ -4,6 +4,7 @@ import Background from "./components/Background";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import About from "./components/About";
+import Experience from "./components/Experience";
 import Skills from "./components/Skills";
 import Projects from "./components/Projects";
 import EducationAndTimeline from "./components/EducationAndTimeline";
@@ -64,7 +65,7 @@ export default function App() {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
-  const sections = ["hero", "about", "skills", "projects", "education-timeline", "contact"];
+  const sections = ["hero", "about", "experience", "skills", "projects", "education-timeline", "contact"];
 
   // Scroll to section helper with premium curtain sweep transition
   const handleNavClick = (sectionId: string) => {
@@ -167,6 +168,15 @@ export default function App() {
           transition={{ duration: 0.6 }}
         >
           <About />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+        >
+          <Experience />
         </motion.div>
 
         <motion.div

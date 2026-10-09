@@ -31,3 +31,17 @@ export interface Message {
   text: string;
   timestamp: Date;
 }
+
+export interface ExperienceItem {
+  id: string;
+  role: string;
+  company: string;
+  companyUrl: string;
+  tagline: string;
+  location: string;
+  period: string;
+  status: string;
+  type: string;
+  overview: string;
+  techStack: string[];
+}

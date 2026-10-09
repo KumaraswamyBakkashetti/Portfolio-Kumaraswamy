@@ -38,27 +38,30 @@ export default function About() {
             Bridging High-Performance Code & LLM Intelligence
           </h2>
           <p className="font-sans text-neutral-600 dark:text-white/50 text-sm sm:text-base leading-relaxed transition-colors duration-300">
-            I am Kumaraswamy Bakkashetti, a Software Engineer from Hyderabad, India, focusing on
-            the intersection of high-availability backend engineering and robust AI orchestration.
+            I am Kumaraswamy Bakkashetti, a Software Engineer from Hyderabad, India, and Software Engineer Intern at Aptroid Consulting (Division of Zeta Global). I specialize in deep programming, systems thinking, high-performance Spring Boot and Python backend services, and cutting-edge agentic AI.
           </p>
           <p className="font-sans text-neutral-600 dark:text-white/50 text-sm sm:text-base leading-relaxed transition-colors duration-300">
-            From architecting safe multi-agent execution monitors to designing LLM classifiers for table transformations, 
-            I construct software that makes complex models predictable, secure, and production-ready.
+            At Zeta Global / Aptroid, I develop enterprise backend architectures and engineer autonomous agentic flows for end-to-end Jira ticket extraction, requirement analysis, solution synthesis, and automated deployment pipelines.
           </p>
-          <div className="pt-4 flex items-center gap-6">
+          <div className="pt-4 grid grid-cols-2 sm:flex sm:items-center gap-4 sm:gap-6">
             <div>
-              <div className="font-sans font-bold text-3xl text-neutral-950 dark:text-white transition-colors duration-300">9.43</div>
-              <div className="font-sans text-xs text-neutral-500 dark:text-white/30 transition-colors duration-300">KMIT B.Tech CGPA</div>
+              <div className="font-sans font-bold text-2xl sm:text-3xl text-orange-500 transition-colors duration-300">Zeta Global</div>
+              <div className="font-sans text-xs text-neutral-500 dark:text-white/40 transition-colors duration-300">SWE Intern</div>
             </div>
-            <div className="h-8 w-px bg-neutral-200 dark:bg-white/10 transition-colors duration-300" />
+            <div className="hidden sm:block h-8 w-px bg-neutral-200 dark:bg-white/10 transition-colors duration-300" />
             <div>
-              <div className="font-sans font-bold text-3xl text-neutral-950 dark:text-white transition-colors duration-300">230+</div>
-              <div className="font-sans text-xs text-neutral-500 dark:text-white/30 transition-colors duration-300">LeetCode Solved</div>
+              <div className="font-sans font-bold text-2xl sm:text-3xl text-neutral-950 dark:text-white transition-colors duration-300">9.43</div>
+              <div className="font-sans text-xs text-neutral-500 dark:text-white/40 transition-colors duration-300">KMIT B.Tech CGPA</div>
             </div>
-            <div className="h-8 w-px bg-neutral-200 dark:bg-white/10 transition-colors duration-300" />
+            <div className="hidden sm:block h-8 w-px bg-neutral-200 dark:bg-white/10 transition-colors duration-300" />
             <div>
-              <div className="font-sans font-bold text-3xl text-neutral-950 dark:text-white transition-colors duration-300">Top 16</div>
-              <div className="font-sans text-xs text-neutral-500 dark:text-white/30 transition-colors duration-300">Hackathon Finalist</div>
+              <div className="font-sans font-bold text-2xl sm:text-3xl text-neutral-950 dark:text-white transition-colors duration-300">230+</div>
+              <div className="font-sans text-xs text-neutral-500 dark:text-white/40 transition-colors duration-300">LeetCode Solved</div>
+            </div>
+            <div className="hidden sm:block h-8 w-px bg-neutral-200 dark:bg-white/10 transition-colors duration-300" />
+            <div>
+              <div className="font-sans font-bold text-2xl sm:text-3xl text-neutral-950 dark:text-white transition-colors duration-300">Top 16</div>
+              <div className="font-sans text-xs text-neutral-500 dark:text-white/40 transition-colors duration-300">Hackathon Finalist</div>
             </div>
           </div>
         </div>
